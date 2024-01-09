@@ -1,10 +1,40 @@
 // index.js
 require('dotenv').config();
 const express = require('express');
+const nodemailer = require('nodemailer'); // Make sure to require nodemailer
 const app = express();
-const port = 3001; // Make sure this is a different port from your React app
-
+const port = 3001;
 app.use(express.json()); // For parsing application/json
+
+// Transporter object using the default SMTP transport  
+// const { name, user_email, subject, message } = req.body;
+let transporter = nodemailer.createTransport({
+    host: process.env.SMTP_HOST,
+    port: 465,
+    secure: true,
+    auth: {
+        user: process.env.SMTP_EMAIL_ADDRESS,
+        pass: process.env.SMTP_PASS,
+    },
+});
+
+
+// Function to send an email with the OTP
+const sendOtpEmail = (email, otp) => {
+    let mailOptions = {
+      from: `"Correct" <${process.env.FROM_EMAIL}>`, // Fixed template literal
+      to: process.env.TO_EMAIL, // Send to the email provided by the user
+      subject: 'Your OTP',
+      text: `Your OTP is: ${otp}`,
+    };
+  
+    transporter.sendMail(mailOptions, (error, info) => {
+      if (error) {
+        return console.log(error);
+      }
+      console.log('Message sent: %s', info.messageId);
+    });
+  };
 
 // Placeholder for checking user details
 app.post('/checkdetails', (req, res) => {
@@ -28,42 +58,22 @@ function generateOTP() {
   return otp.toString();
 }
 
-// Function to send an email with the OTP
-const sendOtpEmail = (email, otp) => {
-    let mailOptions = {
-      from: '"CORRECT" <${process.env.FROM_EMAIL}>', // sender address
-      to: process.env.TO_EMAIL, // list of receivers
-      subject: 'Your OTP', // Subject line
-      text: `Your OTP is: ${otp}`, // plain text body
-      // html: `<b>Your OTP is: ${otp}</b>` // html body
-    };
-  
-    transporter.sendMail(mailOptions, (error, info) => {
-      if (error) {
-        return console.log(error);
-      }
-      console.log('Message sent: %s', info.messageId);
-    });
-  };
 
 // Endpoint to generate and "send" an OTP
 app.post('/generateOTP', (req, res) => {
-  const { email } = req.body;
-  if (!email) {
-    return res.status(400).json({ message: "Email is required" });
-  }
-  // Generate an OTP
-  const otp = generateOTP();
-  // Store the OTP with the user's email as the key
-  otpStore[email] = otp;
-  // For the purpose of this example, we will just log the OTP to the console
-  console.log(`OTP for ${email}: ${otp}`);
-  // In a real app, you would send the OTP via email here
-
-  // Respond with a success status
-  res.status(200).json({ message: "OTP generated and sent" });
-});
-
+    const { email } = req.body;
+    if (!email) {
+      return res.status(400).json({ message: "Email is required" });
+    }
+    const otp = generateOTP();
+    otpStore[email] = otp;
+    console.log(`OTP for ${email}: ${otp}`);
+    
+    // Call the send email function here
+    sendOtpEmail(email, otp);
+  
+    res.status(200).json({ message: "OTP generated and sent" });
+  });
 
 // Endpoint to verify the OTP
 app.post('/verifyOTP', (req, res) => {
@@ -85,15 +95,3 @@ app.post('/verifyOTP', (req, res) => {
       res.status(401).json({ message: "Invalid OTP", verified: false });
     }
   });
-
-// Transporter object using the default SMTP transport  
-const { name, user_email, subject, message } = req.body;
-let transporter = nodemailer.createTransport({
-    host: process.env.SMTP_HOST,
-    port: 465,
-    secure: true,
-    auth: {
-        user: process.env.SMTP_EMAIL_ADDRESS,
-        pass: process.env.EMAIL_PASS,
-    },
-});
