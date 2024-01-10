@@ -3,8 +3,12 @@ require('dotenv').config();
 const express = require('express');
 const nodemailer = require('nodemailer'); // Make sure to require nodemailer
 const app = express();
+const cors = require('cors');
 app.use(express.json()); // For parsing application/json
 const crypto = require('crypto');
+
+// Enable CORS for all routes
+app.use(cors());
 
 const users = {};
 
@@ -28,7 +32,7 @@ function generateToken() {
 
 // Function to send a confirmation email with a link
 function sendConfirmationEmail(email, token) {
-  const confirmationUrl = `http://localhost:3000/confirm-email?token=${token}`; // Adjust the URL based on your frontend setup
+  const confirmationUrl = `http://localhost:3000/confirm-email/${token}`;
 
   let mailOptions = {
     from: `"Correct" <${process.env.FROM_EMAIL}>`,
