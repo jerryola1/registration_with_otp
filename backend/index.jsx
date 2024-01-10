@@ -12,6 +12,15 @@ app.use(cors());
 
 const users = {};
 
+
+// Reset a user's confirmed status (for testing purposes)
+// You can place this in your code where it can be executed once to reset the status
+const userEmailToReset = 'olagunjujerry@gmail.com';
+if (users[userEmailToReset]) {
+  users[userEmailToReset].confirmed = false;
+  console.log(`Reset confirmed status for: ${userEmailToReset}`);
+}
+
 // Transporter object using the default SMTP transport  
 // const { name, user_email, subject, message } = req.body;
 let transporter = nodemailer.createTransport({
@@ -62,15 +71,37 @@ app.post('/register', (req, res) => {
 // Email confirmation endpoint
 app.get('/confirm-email', (req, res) => {
   const { token } = req.query;
+  console.log("Received token for confirmation:", token);
+
+  // Find the user associated with the token
   const user = Object.values(users).find(user => user.token === token);
 
-  if (user && !user.confirmed) {
+  if (!user) {
+    console.log("No user found for token:", token);
+    return res.status(400).send("Invalid or expired token.");
+  }
+
+  console.log("User found for token:", user.email);
+  console.log("User confirmed status:", user.confirmed);
+  console.log("User stored token:", user.token);
+
+  // Check if the token matches and the user isn't already confirmed
+  if (user.token === token && !user.confirmed) {
     user.confirmed = true;
-    res.send("Email successfully confirmed!");
+    console.log("Email confirmed for user:", user.email);
+    return res.send("Email successfully confirmed!");
   } else {
-    res.status(400).send("Invalid or expired token.");
+    if (user.token !== token) {
+      console.log("Token mismatch for user:", user.email);
+    }
+    if (user.confirmed) {
+      console.log("User already confirmed:", user.email);
+    }
+    return res.status(400).send("Invalid or expired token.");
   }
 });
+
+
 
 const port = 3001;
 app.listen(port, () => {
